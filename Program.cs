@@ -85,11 +85,26 @@ app.MapGet("/api/orders/{id}", (BangazonDbContext db, int id) =>
     return db.Orders.SingleOrDefault(c => c.OrderId == id);
 });
 
+// TODO: check into call auto adding the products to the order and failing if the product doesn't exist
 app.MapPost("/api/orders", (BangazonDbContext db, Order order) =>
 {
     db.Orders.Add(order);
     db.SaveChanges();
     return Results.Created($"/api/orders/{order.OrderId}", order);
+});
+
+app.MapDelete("/api/orders/{id}", (BangazonDbContext db, int id) =>
+{
+    var order = db.Orders.SingleOrDefault(c => c.OrderId == id);
+
+    if (order == null)
+    {
+        return Results.NotFound();
+    }
+
+    db.Orders.Remove(order);
+    db.SaveChanges();
+    return Results.NoContent();
 });
 
 app.Run();
