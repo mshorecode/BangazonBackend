@@ -24,7 +24,7 @@ public class BangazonDbContext : DbContext
 
         modelBuilder.Entity<User>().HasData(new User[]
         {
-            new User {Id = 1, Username = "mshorecode", FirstName = "Ryan", LastName = "Shore", Email = "mshorecode@gmail.com", Seller = false, Uid = "nJznAO7OlpNBrjkasjr5IZSM0Rl2"}
+            
         });
 
         modelBuilder.Entity<Category>().HasData(new Category[]
