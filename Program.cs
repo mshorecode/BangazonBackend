@@ -50,17 +50,17 @@ app.MapGet("/user/{id}", (BangazonDbContext db, int id) =>
     return db.Users.SingleOrDefault(user => user.Id == id);
 });
 
-app.MapGet("/checkuser/{uid}", (BangazonDbContext db, string uid) =>
+app.MapPost("/checkuser", (BangazonDbContext db, UserAuthDto userAuthDto) =>
 {
-    var user = db.Users.Where(user => user.Uid == uid).ToList();
+    var userUid = db.Users.SingleOrDefault(user => user.Uid == userAuthDto.Uid);
 
-    if (uid == null)
+    if (userUid == null)
     {
         return Results.NotFound();
     }
     else
     {
-        return Results.Ok(user);
+        return Results.Ok(userUid);
     }
 });
 
@@ -71,20 +71,20 @@ app.MapPost("/register", (BangazonDbContext db, User user) =>
     return Results.Created($"/user/{user.Id}", user);
 });
 
-app.MapPut("/user/{id}", (BangazonDbContext db, int id, UserDto user) =>
+app.MapPatch("/user/{id}", (BangazonDbContext db, int id, UserDto user) =>
 {
-    var userUpdate = db.Users.SingleOrDefault(user => user.Id == id);
+    var userToUpdate = db.Users.SingleOrDefault(user => user.Id == id);
 
-    if (userUpdate == null)
+    if (userToUpdate == null)
     {
         return Results.NotFound();
     }
 
-    userUpdate.Username = String.IsNullOrEmpty(user.Username) ? userUpdate.Username : user.Username;
-    userUpdate.FirstName = String.IsNullOrEmpty(user.FirstName) ? userUpdate.FirstName : user.FirstName;
-    userUpdate.LastName = String.IsNullOrEmpty(user.LastName) ? userUpdate.LastName : user.LastName;
-    userUpdate.Email = String.IsNullOrEmpty(user.Email) ? userUpdate.Email : user.Email;
-    userUpdate.Seller = user.Seller ?? userUpdate.Seller;
+    if (!string.IsNullOrEmpty(user.Username)) userToUpdate.Username = user.Username;
+    if (!string.IsNullOrEmpty(user.FirstName)) userToUpdate.FirstName = user.FirstName;
+    if (!string.IsNullOrEmpty(user.LastName)) userToUpdate.LastName = user.LastName;
+    if (!string.IsNullOrEmpty(user.Email)) userToUpdate.Email = user.Email;
+    if (user.Seller.HasValue) userToUpdate.Seller = user.Seller.Value;
 
     db.SaveChanges();
     return Results.NoContent();
@@ -96,9 +96,21 @@ app.MapGet("/products", (BangazonDbContext db) =>
     return db.Products.ToList();
 });
 
-app.MapGet("/products/{id}", (BangazonDbContext db, int id) =>
+app.MapGet("/products/{productId}", (BangazonDbContext db, int productId) =>
 {
-    return db.Products.SingleOrDefault(c => c.ProductId == id);
+    return db.Products.SingleOrDefault(c => c.ProductId == productId);
+});
+
+//Products by SellerId
+app.MapGet("/products/seller/{sellerId}", (BangazonDbContext db, int sellerId) =>
+{
+    return db.Products.Where(p => p.SellerId == sellerId).ToList();
+});
+
+// Filter products by category
+app.MapGet("/products/category/{categoryId}", (BangazonDbContext db, int categoryId) =>
+{
+    return db.Products.Where(p => p.CategoryId == categoryId).ToList();
 });
 
 // Order routes
@@ -134,21 +146,6 @@ app.MapPost("/orders/addproduct", (BangazonDbContext db, OrderProductDto orderPr
     db.SaveChanges();
     return Results.Created($"/orders/{orderProductDto.OrderId}/products/{orderProductDto.ProductId}", product);
 });
-
-//app.MapPatch("/orders/{orderId}/products/{productId}", (BangazonDbContext db, int orderId, int productId) =>
-//{
-//    var order = db.Orders.Include(order => order.Products).SingleOrDefault(order => order.OrderId == orderId);
-//    var product = db.Products.Find(productId);
-
-//    if (order == null || product == null)
-//    {
-//        return Results.NotFound();
-//    }
-
-//    order.Products.Add(product);
-//    db.SaveChanges();
-//    return Results.Created($"/orders/{orderId}/products/{productId}", product);
-//});
 
 app.MapDelete("/orders/{id}", (BangazonDbContext db, int id) =>
 {
@@ -187,7 +184,8 @@ app.MapGet("/categories", (BangazonDbContext db) =>
 
 app.MapGet("/categories/{id}", (BangazonDbContext db, int id) =>
 {
-    return db.Categories.SingleOrDefault(category => category.CategoryId == id);
+    var category = db.Categories.SingleOrDefault(category => category.CategoryId == id);
+    return category.CategoryType;
 });
 
 // Payment routes
