@@ -39,7 +39,8 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
-// User routes
+
+// USERS
 app.MapGet("/user", (BangazonDbContext db) =>
 {
     return db.Users.ToList();
@@ -90,7 +91,8 @@ app.MapPatch("/user/{id}", (BangazonDbContext db, int id, UserDto user) =>
     return Results.NoContent();
 });
 
-// Product routes
+
+// PRODUCTS
 app.MapGet("/products", (BangazonDbContext db) =>
 {
     return db.Products.ToList();
@@ -98,33 +100,85 @@ app.MapGet("/products", (BangazonDbContext db) =>
 
 app.MapGet("/products/{productId}", (BangazonDbContext db, int productId) =>
 {
-    return db.Products.SingleOrDefault(c => c.ProductId == productId);
+    return db.Products.SingleOrDefault(product => product.ProductId == productId);
 });
 
-//Products by SellerId
 app.MapGet("/products/seller/{sellerId}", (BangazonDbContext db, int sellerId) =>
 {
-    return db.Products.Where(p => p.SellerId == sellerId).ToList();
+    return db.Products.Where(product => product.SellerId == sellerId).ToList();
 });
 
-// Filter products by category
 app.MapGet("/products/category/{categoryId}", (BangazonDbContext db, int categoryId) =>
 {
-    return db.Products.Where(p => p.CategoryId == categoryId).ToList();
+    return db.Products.Where(product => product.CategoryId == categoryId).ToList();
 });
 
-// Order routes
+app.MapPost("/products", (BangazonDbContext db, Product product) =>
+{
+    db.Products.Add(product);
+    db.SaveChanges();
+    return Results.Created($"/products/{product.ProductId}", product);
+});
+
+app.MapPatch("/products/{productId}", (BangazonDbContext db, int productId, ProductDto product) =>
+{
+    var productToUpdate = db.Products.SingleOrDefault(product => product.ProductId == productId);
+
+    if (productToUpdate == null)
+    {
+        return Results.NotFound();
+    }
+
+    if (product.CategoryId != 0) productToUpdate.CategoryId = product.CategoryId;
+    if (!string.IsNullOrEmpty(product.ProductName)) productToUpdate.ProductName = product.ProductName;
+    if (!string.IsNullOrEmpty(product.ProductDescription)) productToUpdate.ProductDescription = product.ProductDescription;
+    if (product.ProductPrice != 0) productToUpdate.ProductPrice = product.ProductPrice;
+    if (!string.IsNullOrEmpty(product.ProductImageUrl)) productToUpdate.ProductImageUrl = product.ProductImageUrl;
+
+    db.SaveChanges();
+    return Results.NoContent();
+});
+
+app.MapDelete("/products/{productId}", (BangazonDbContext db, int productId) =>
+{
+    var product = db.Products.SingleOrDefault(p => p.ProductId == productId);
+
+    if (product == null)
+    {
+        return Results.NotFound();
+    }
+
+    db.Products.Remove(product);
+    db.SaveChanges();
+    return Results.NoContent();
+});
+
+
+// ORDERS
 app.MapGet("/orders", (BangazonDbContext db) =>
 {
     return db.Orders.ToList();
 });
 
-app.MapGet("/orders/{id}", (BangazonDbContext db, int id) =>
+app.MapGet("/seller/{sellerId}/orders", (BangazonDbContext db, int sellerId) =>
 {
-    return db.Orders.SingleOrDefault(c => c.OrderId == id);
+    var order = db.Orders.Include(order => order.Products).Where(order => order.Products.Any(product => product.SellerId == sellerId)).ToList();
+
+    return order;
 });
 
-// TODO: check into call auto adding the products to the order with post instead of using patch
+app.MapGet("/customer/{customerId}/orders", (BangazonDbContext db, int customerId) =>
+{
+    var order = db.Orders.Where(order => order.CustomerId == customerId && order.Status).ToList();
+    return order;
+});
+
+app.MapGet("/products/orders/{orderId}", (BangazonDbContext db, int orderId) =>
+{
+    var order = db.Orders.Include(order => order.Products).SingleOrDefault(order => order.OrderId == orderId);
+    return order.Products.ToList();
+});
+
 app.MapPost("/orders", (BangazonDbContext db, Order order) =>
 {
     db.Orders.Add(order);
@@ -176,7 +230,8 @@ app.MapDelete("/orders/{orderId}/products/{productId}", (BangazonDbContext db, i
     return Results.NoContent();
 });
 
-// Category routes
+
+// CATEGORIES
 app.MapGet("/categories", (BangazonDbContext db) =>
 {
     return db.Categories.ToList();
@@ -188,7 +243,8 @@ app.MapGet("/categories/{id}", (BangazonDbContext db, int id) =>
     return category.CategoryType;
 });
 
-// Payment routes
+
+// PAYMENTS
 app.MapGet("/payments", (BangazonDbContext db) =>
 {
     return db.Payments.ToList();
